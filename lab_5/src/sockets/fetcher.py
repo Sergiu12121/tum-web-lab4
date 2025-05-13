@@ -1,33 +1,38 @@
-def fetch_page(url):
-    import socket
+import socket
+import ssl
+from urllib.parse import urlparse
 
-    # Parse the URL to extract the hostname and path
-    if url.startswith("http://"):
-        url = url[7:]
-    elif url.startswith("https://"):
-        url = url[8:]
+def fetch_page(url, max_redirects=5):
+    if max_redirects == 0:
+        raise Exception("Too many redirects")
 
-    hostname, path = url.split("/", 1) if "/" in url else (url, "")
-    path = "/" + path if path else "/"
+    parsed_url = urlparse(url)
+    hostname = parsed_url.hostname
+    path = parsed_url.path or "/"
+    port = 443 if parsed_url.scheme == "https" else 80
 
-    # Create a socket connection
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((hostname, 80))
+    with socket.create_connection((hostname, port)) as sock:
+        if parsed_url.scheme == "https":
+            context = ssl.create_default_context()
+            sock = context.wrap_socket(sock, server_hostname=hostname)
 
-    # Send the HTTP GET request
-    request = f"GET {path} HTTP/1.1\r\nHost: {hostname}\r\nConnection: close\r\n\r\n"
-    sock.send(request.encode())
+        request = f"GET {path} HTTP/1.1\r\nHost: {hostname}\r\nConnection: close\r\n\r\n"
+        sock.sendall(request.encode())
 
-    # Receive the response
-    response = b""
-    while True:
-        chunk = sock.recv(4096)
-        if not chunk:
-            break
-        response += chunk
+        response = b""
+        while True:
+            data = sock.recv(4096)
+            if not data:
+                break
+            response += data
 
-    sock.close()
+    response_text = response.decode()
+    headers, body = response_text.split("\r\n\r\n", 1)
 
-    # Extract the body from the response
-    headers, body = response.split(b"\r\n\r\n", 1)
-    return body.decode()
+    if "301" in headers or "302" in headers:
+        for line in headers.split("\r\n"):
+            if line.lower().startswith("location:"):
+                new_url = line.split(":", 1)[1].strip()
+                return fetch_page(new_url, max_redirects - 1)
+
+    return {"headers": headers, "body": body}

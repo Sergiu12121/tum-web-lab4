@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+
+import sys
+from sockets.fetcher import fetch_page
+from sockets.parser import parse_html, parse_json
+from sockets.cache import Cache
+
+def print_help():
+    help_text = """
+Usage:
+  go2web -u <URL>         # make an HTTP request to the specified URL and print the response
+  go2web -s <search-term> # make an HTTP request to search the term using your favorite search engine and print top 10 results
+  go2web -h               # show this help
+"""
+    print(help_text)
+
+def fetch_url(url):
+    response = fetch_page(url)
+    content_type = response.get("Content-Type", "")
+
+    # Process JSON responses
+    if "json" in content_type:
+        print(parse_json(response["body"]))
+    else:
+        # Process HTML responses and strip tags
+        readable_content = parse_html(response["body"])
+        print(readable_content)
+
+def search_term(term):
+    search_engine_url = f"https://www.google.com/search?q={term.replace(' ', '+')}"
+    response = fetch_page(search_engine_url)
+    links = parse_html(response["body"], extract_links=True)
+    print("\n".join(links[:10]))
+
+def main():
+    if len(sys.argv) < 2 or sys.argv[1] == "-h":
+        print_help()
+        sys.exit(0)
+
+    command = sys.argv[1]
+
+    if command == "-u":
+        if len(sys.argv) < 3:
+            print("Error: URL not provided.")
+            print_help()
+            sys.exit(1)
+        url = sys.argv[2]
+        fetch_url(url)
+
+    elif command == "-s":
+        if len(sys.argv) < 3:
+            print("Error: Search term not provided.")
+            print_help()
+            sys.exit(1)
+        term = " ".join(sys.argv[2:])
+        search_term(term)
+
+    else:
+        print("Error: Unknown command.")
+        print_help()
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()
