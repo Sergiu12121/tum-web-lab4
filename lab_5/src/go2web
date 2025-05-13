@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 
 import sys
+import re
+import json
+from bs4 import BeautifulSoup
 from sockets.fetcher import fetch_page
 from sockets.parser import parse_html, parse_json
 from sockets.cache import Cache
@@ -16,21 +19,88 @@ Usage:
 
 def fetch_url(url):
     response = fetch_page(url)
-    content_type = response.get("Content-Type", "")
+    content_type = response.get("headers", "").lower()
 
-    # Process JSON responses
-    if "json" in content_type:
-        print(parse_json(response["body"]))
+    # Debugging: Print the response headers and body
+    print("Response Headers:", response.get("headers", ""))
+    body = response.get("body", "")
+
+    # Save the response body to a text file for further analysis
+    with open("response_output.txt", "w", encoding="utf-8") as file:
+        file.write(body)
+    print("Response body saved to 'response_output.txt'.")
+
+    # Parse the HTML response
+    def extract_information_from_html(data):
+        try:
+            soup = BeautifulSoup(data, "html.parser")
+
+            # Extract the name (e.g., title of the ad)
+            name = soup.find("title").text if soup.find("title") else "N/A"
+
+            # Extract the description
+            description_tag = soup.find("meta", {"name": "description"})
+            description = description_tag["content"] if description_tag else "N/A"
+
+            # Extract general information
+            general_info = []
+            particular_info = []
+
+            # Find all key-value pairs in the HTML
+            for key_span in soup.find_all("span", class_="styles_group__key__uRhnQ"):
+                value_span = key_span.find_next("span", class_="styles_group__value__XN7OI")
+                if value_span:
+                    key = key_span.text.strip()
+                    value = value_span.text.strip()
+
+                    # Categorize the information
+                    if key in ["Marcă", "Model", "Generație", "Înmatriculare", "Stare", "Disponibilitate", "Țara de origine"]:
+                        general_info.append(f"{key} - {value}")
+                    elif key in ["Autorul anunțului", "An de fabricație", "Volan", "Număr de locuri", "Tip caroserie", "Număr uși", "Rulaj", "Capacitate cilindrică", "Putere", "Tip combustibil", "Cutie de viteze", "Tip tracțiune", "Culoare"]:
+                        particular_info.append(f"{key} - {value}")
+
+            # Extract the price (if available in a specific tag)
+            price_tag = soup.find("meta", {"property": "product:price:amount"})
+            price = f"{price_tag['content']} €" if price_tag else "N/A"
+
+            # Format the output
+            output = f"""
+Name: {name}
+Description: {description}
+
+General Information:
+{', '.join(general_info)}
+
+Particularități:
+{', '.join(particular_info)}
+
+Price: {price}
+"""
+            # Save the extracted information to a text file
+            with open("extracted_output.txt", "w", encoding="utf-8") as file:
+                file.write(output)
+            print("Extracted information saved to 'extracted_output.txt'.")
+        except Exception as e:
+            print("Error parsing HTML data:", e)
+
+    # Check if the response is HTML and extract information
+    if "<html" in body.lower():
+        extract_information_from_html(body)
     else:
-        # Process HTML responses and strip tags
-        readable_content = parse_html(response["body"])
-        print(readable_content)
+        print("The response does not contain HTML content.")
 
 def search_term(term):
     search_engine_url = f"https://www.google.com/search?q={term.replace(' ', '+')}"
+    print(f"Searching for: {term}")
     response = fetch_page(search_engine_url)
+    
+    # Extract links from the HTML response
     links = parse_html(response["body"], extract_links=True)
-    print("\n".join(links[:10]))
+    if links:
+        print("\nTop 10 Results:")
+        print("\n".join(links[:10]))
+    else:
+        print("No results found.")
 
 def main():
     if len(sys.argv) < 2 or sys.argv[1] == "-h":
