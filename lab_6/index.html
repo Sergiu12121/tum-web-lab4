@@ -3,18 +3,37 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lab 6 - Front-end App</title>
+  <title>Casino Royale</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div id="app">
     <header>
-      <h1>My Front-end App</h1>
-      <button id="toggle-theme">Toggle Theme</button>
+      <h1>Casino Royale</h1>
+      <button id="toggle-theme">🎲 Toggle Theme</button>
     </header>
     <main>
-      <div id="entity-list"></div>
-      <button id="add-entity">Add Entity</button>
+      <div id="entity-list">
+        <h2>Your Bets</h2>
+        <ul id="bets"></ul>
+      </div>
+      <div id="controls">
+        <button id="add-bet">Place a Bet</button>
+        <button id="clear-bets">Clear Bets</button>
+      </div>
+      <div id="games">
+        <h2>Games</h2>
+        <div class="game-thumbnails">
+          <a href="crash.html">
+            <img src="images/crash-game.jpg" alt="Crash Game">
+            <p>🎮 Play Crash</p>
+          </a>
+          <a href="roulette.html">
+            <img src="images/roulette.jpg" alt="Roulette Game">
+            <p>🎲 Play Roulette</p>
+          </a>
+        </div>
+      </div>
     </main>
   </div>
   <script src="script.js"></script>
