@@ -13,14 +13,20 @@
       <button id="toggle-theme">🎲 Toggle Theme</button>
     </header>
     <main>
+      <div id="balance-section">
+        <h2>Balance</h2>
+        <p>Current Balance: $<span id="balance">0</span></p>
+        <input type="number" id="add-balance" placeholder="Add balance">
+        <button id="add-balance-btn">Add Balance</button>
+      </div>
+
       <div id="entity-list">
         <h2>Your Bets</h2>
         <ul id="bets"></ul>
       </div>
-      <div id="controls">
-        <button id="add-bet">Place a Bet</button>
-        <button id="clear-bets">Clear Bets</button>
-      </div>
+      <div id="history">
+        <h2>Game History</h2>
+        <ul id="game-history"></ul>
       <div id="games">
         <h2>Games</h2>
         <div class="game-thumbnails">
