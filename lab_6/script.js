@@ -34,6 +34,7 @@ if (document.title === "Crash Game") {
   const betInput = document.getElementById("crash-bet");
   const startButton = document.getElementById("start-crash");
   const resultDiv = document.getElementById("crash-result");
+  const explosionGif = document.getElementById("explosion-gif");
 
   let rocketY = canvas.height - 50;
   let multiplier = 1.0;
@@ -41,24 +42,22 @@ if (document.title === "Crash Game") {
   let animationFrame;
   let rocketSpeed = 2;
   let isCrashed = false;
-
-  // Load the rocket image
-  const rocketImage = new Image();
-  rocketImage.src = "images/rocket.png";
+  let isStopped = false;
 
   function drawBackground() {
-    // Gradient background to simulate the sky
     const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    gradient.addColorStop(0, "#87CEEB"); // Sky blue
-    gradient.addColorStop(1, "#FFFFFF"); // White
+    gradient.addColorStop(0, "#87CEEB");
+    gradient.addColorStop(1, "#FFFFFF");
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 
   function drawRocket() {
-    // Draw the rocket image
-    const rocketWidth = 70;
-    const rocketHeight = 90;
+    const rocketImage = new Image();
+    rocketImage.src = "images/rocket.png";
+    const rocketWidth = 40;
+    const rocketHeight = 60;
+
     ctx.drawImage(
       rocketImage,
       canvas.width / 2 - rocketWidth / 2,
@@ -67,43 +66,49 @@ if (document.title === "Crash Game") {
       rocketHeight
     );
 
+    ctx.fillStyle = "orange";
+    ctx.beginPath();
+    ctx.moveTo(canvas.width / 2 - 5, rocketY + rocketHeight);
+    ctx.lineTo(canvas.width / 2 + 5, rocketY + rocketHeight);
+    ctx.lineTo(canvas.width / 2, rocketY + rocketHeight + 20);
+    ctx.closePath();
+    ctx.fill();
   }
 
   function drawMultiplier() {
-    // Display the multiplier
     ctx.fillStyle = "black";
     ctx.font = "24px Arial";
     ctx.textAlign = "center";
     ctx.fillText(`x${multiplier.toFixed(2)}`, canvas.width / 2, 50);
   }
 
-  function drawExplosion() {
-    // Draw an explosion effect
-    ctx.fillStyle = "orange";
-    ctx.beginPath();
-    ctx.arc(canvas.width / 2, rocketY, 30, 0, Math.PI * 2);
-    ctx.fill();
+  function showExplosion() {
+    const explosionWidth = 80;
+    const explosionHeight = 80;
 
-    ctx.fillStyle = "yellow";
-    ctx.beginPath();
-    ctx.arc(canvas.width / 2, rocketY, 20, 0, Math.PI * 2);
-    ctx.fill();
+    explosionGif.style.left = `${canvas.offsetLeft + canvas.width / 2 - explosionWidth / 2}px`;
+    explosionGif.style.top = `${canvas.offsetTop + rocketY - explosionHeight / 2}px`;
+    explosionGif.style.display = "block";
+
+    setTimeout(() => {
+      explosionGif.style.display = "none";
+    }, 1500);
   }
 
   function animateRocket(betAmount) {
-    if (isCrashed) return;
-
+    if (isCrashed || isStopped) return; // Stop animation if the game is over or stopped
+  
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     drawBackground();
     drawRocket();
     drawMultiplier();
-
+  
     rocketY -= rocketSpeed;
-    multiplier += 0.02;
-
+    multiplier += 0.01; // Increment multiplier
+  
     if (multiplier >= crashMultiplier) {
       isCrashed = true;
-      endGame(betAmount);
+      endGame(betAmount, isStopped); // Pass whether the user stopped the game
     } else {
       animationFrame = requestAnimationFrame(() => animateRocket(betAmount));
     }
@@ -124,12 +129,41 @@ if (document.title === "Crash Game") {
     resetGame();
     crashMultiplier = determineCrashMultiplier();
     animateRocket(betAmount);
+
+    // Change the button to "Stop"
+    startButton.textContent = "Stop";
+    startButton.onclick = () => stopGame(betAmount);
+  }
+
+  function stopGame(betAmount) {
+    if (isStopped || isCrashed) return; // Prevent multiple stops
+
+    isStopped = true;
+    cancelAnimationFrame(animationFrame); // Stop the rocket animation immediately
+
+    // Lock in the current multiplier as winnings
+    const winningsMultiplier = multiplier;
+    const winnings = (betAmount * winningsMultiplier).toFixed(2);
+
+    // Add winnings to the user's balance
+    window.addWinnings(parseFloat(winnings));
+
+    // Display the result
+    resultDiv.textContent = `You cashed out at x${winningsMultiplier.toFixed(2)} and won ${winnings} credits!`;
+
+    // Prevent further animation or crashes
+    isCrashed = true;
+
+    // Reset the button to "Start Game"
+    startButton.textContent = "Start Game";
+    startButton.onclick = startGame;
   }
 
   function resetGame() {
     rocketY = canvas.height - 50;
-    multiplier = 1.0;
+    multiplier = 1.0; // Reset multiplier only when starting a new game
     isCrashed = false;
+    isStopped = false;
     resultDiv.textContent = "";
     cancelAnimationFrame(animationFrame);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -137,30 +171,30 @@ if (document.title === "Crash Game") {
   }
 
   function determineCrashMultiplier() {
-    // Higher chance of crashing at lower multipliers
     const random = Math.random();
-    if (random < 0.5) return (Math.random() * 1.5 + 1).toFixed(2); // 1.0 - 2.5
-    if (random < 0.8) return (Math.random() * 2 + 2.5).toFixed(2); // 2.5 - 4.5
-    return (Math.random() * 5 + 4.5).toFixed(2); // 4.5 - 9.5
+    if (random < 0.5) return (Math.random() * 1.5 + 1).toFixed(2);
+    if (random < 0.8) return (Math.random() * 2 + 2.5).toFixed(2);
+    return (Math.random() * 5 + 4.5).toFixed(2);
   }
 
-  function endGame(betAmount) {
+  function endGame(betAmount, userStopped) {
     cancelAnimationFrame(animationFrame);
-    drawExplosion();
-
-    let winnings = 0;
-    if (multiplier >= crashMultiplier) {
-      winnings = Math.floor(betAmount * crashMultiplier);
-      window.addWinnings(winnings);
+  
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawBackground();
+    showExplosion();
+  
+    if (!userStopped) {
+      resultDiv.textContent = `CRASHED at x${crashMultiplier}! You lost your bet.`;
     }
-
-    resultDiv.textContent = `CRASHED at x${crashMultiplier}! You ${
-      winnings > 0 ? `won ${winnings} credits!` : "lost your bet."
-    }`;
+  
+    // Reset the button to "Start Game"
+    startButton.textContent = "Start Game";
+    startButton.onclick = startGame;
   }
 
   startButton.addEventListener("click", startGame);
-  drawBackground(); // Initial background
+  drawBackground();
 }
 
 // Roulette Game Logic
@@ -243,11 +277,17 @@ if (document.title === "Roulette Game") {
     }
 
     // Determine the result
-    resultIndex = Math.floor(Math.random() * segments);
+    const winningSegment = Math.floor(Math.random() * segments);
+    const resultColor =
+      winningSegment === 0
+        ? "green"
+        : winningSegment % 2 === 0
+        ? "black"
+        : "red";
 
-    // Start spinning
+    // Start spinning animation
     spinSpeed = Math.random() * 0.1 + 0.3; // Random initial speed
-    animateSpin(bet, choice);
+    animateSpin(bet, choice, winningSegment, resultColor);
   }
 
   function animateSpin(bet, choice) {
