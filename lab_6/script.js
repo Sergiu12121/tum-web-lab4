@@ -328,26 +328,12 @@ if (document.title === "Roulette Game") {
   drawRouletteWheel(); // Initial draw
 }
 
-// Canvas styling for crash (if not in CSS)
-const style = document.createElement('style');
-style.textContent = `
-  #crash-result, #roulette-result {
-    font-size: 18px;
-    margin-top: 20px;
-  }
-
-  #crash-canvas, #roulette-canvas {
-    background-color: #333;
-    border: 2px solid white;
-    margin-top: 20px;
-  }
-`;
-document.head.appendChild(style);
-
 document.addEventListener("DOMContentLoaded", () => {
   const balanceDisplay = document.getElementById("balance");
   const addBalanceInput = document.getElementById("add-balance");
   const addBalanceBtn = document.getElementById("add-balance-btn");
+  const withdrawBalanceInput = document.getElementById("withdraw-balance");
+  const withdrawBalanceBtn = document.getElementById("withdraw-balance-btn");
 
   // Retrieve balance from localStorage or initialize it
   let balance = parseFloat(localStorage.getItem("balance")) || 0;
@@ -371,6 +357,25 @@ document.addEventListener("DOMContentLoaded", () => {
       localStorage.setItem("balance", balance); // Save balance to localStorage
       updateBalanceDisplay();
       addBalanceInput.value = "";
+    });
+  }
+
+  // Withdraw balance
+  if (withdrawBalanceBtn) {
+    withdrawBalanceBtn.addEventListener("click", () => {
+      const amount = parseFloat(withdrawBalanceInput.value);
+      if (isNaN(amount) || amount <= 0) {
+        alert("Please enter a valid amount to withdraw.");
+        return;
+      }
+      if (amount > balance) {
+        alert("Insufficient balance.");
+        return;
+      }
+      balance -= amount;
+      localStorage.setItem("balance", balance); // Save balance to localStorage
+      updateBalanceDisplay();
+      withdrawBalanceInput.value = "";
     });
   }
 
