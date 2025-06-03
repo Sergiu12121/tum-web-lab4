@@ -473,3 +473,46 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
+// API Integration
+const API_URL = "http://localhost:3000";
+let jwt = localStorage.getItem('jwt') || null;
+
+// Simple login to get JWT
+async function login(role = "ADMIN", permissions = ["READ", "WRITE", "DELETE"]) {
+  const res = await fetch(`${API_URL}/token`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ role, permissions })
+  });
+  const data = await res.json();
+  jwt = data.token;
+  localStorage.setItem('jwt', jwt);
+}
+window.login = login; // For manual testing in console
+
+// Fetch bets and display
+async function fetchBets() {
+  if (!jwt) await login();
+  const res = await fetch(`${API_URL}/bets?skip=0&limit=10`, {
+    headers: { Authorization: `Bearer ${jwt}` }
+  });
+  if (res.status === 401) {
+    await login();
+    return fetchBets();
+  }
+  const data = await res.json();
+  const betsList = document.getElementById('bets');
+  if (betsList) {
+    betsList.innerHTML = '';
+    data.bets.forEach(bet => {
+      const li = document.createElement('li');
+      li.textContent = `${bet.user} bet $${bet.amount} on ${bet.game}`;
+      betsList.appendChild(li);
+    });
+  }
+}
+window.fetchBets = fetchBets;
+
+// Call fetchBets on page load if on main page
+if (document.getElementById('bets')) fetchBets();
