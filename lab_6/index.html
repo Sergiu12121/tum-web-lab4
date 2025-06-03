@@ -24,6 +24,11 @@
 
       <div id="entity-list">
         <h2>Your Bets</h2>
+        <div id="bet-controls">
+          <input type="number" id="bet-amount" placeholder="Bet amount" min="1" step="any">
+          <input type="number" id="bet-coef" placeholder="Coefficient (e.g. 2.5)" min="1" step="any">
+          <button id="place-bet-btn">Add Bet</button>
+        </div>
         <ul id="bets"></ul>
       </div>
       <div id="history">
